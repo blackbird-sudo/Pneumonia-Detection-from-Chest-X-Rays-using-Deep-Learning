@@ -33,7 +33,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
 
 # Data transformations
+
 train_transform = transforms.Compose([
+
     transforms.Grayscale(num_output_channels=1),
     transforms.Resize((150, 150)),
     transforms.RandomRotation(10),
@@ -44,6 +46,7 @@ train_transform = transforms.Compose([
 ])
 
 val_transform = transforms.Compose([
+  
     transforms.Grayscale(num_output_channels=1),
     transforms.Resize((150, 150)),
     transforms.ToTensor(),
@@ -51,6 +54,7 @@ val_transform = transforms.Compose([
 ])
 
 def load_data(data_dir, batch_size=32):
+
     """Load medical image dataset"""
     print("Loading medical images...")
     
@@ -83,6 +87,7 @@ def load_data(data_dir, batch_size=32):
     return train_loader, val_loader, train_dataset.classes
 
 def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler, num_epochs=15):
+
     """Train the model"""
     train_losses = []
     val_losses = []
@@ -174,6 +179,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
     return train_losses, val_losses, train_accuracies, val_accuracies, all_preds, all_labels
 
 def plot_results(train_losses, val_losses, train_accuracies, val_accuracies, class_names, all_preds, all_labels):
+
     """Plot training results and metrics"""
     # Plot loss and accuracy
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
@@ -219,6 +225,7 @@ def plot_results(train_losses, val_losses, train_accuracies, val_accuracies, cla
     plt.show()
 
 def main():
+
     # Configuration
     DATA_DIR = "data"
     BATCH_SIZE = 32
