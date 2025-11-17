@@ -1,0 +1,129 @@
+import torch
+import torch.nn as nn
+from torchvision import transforms
+from PIL import Image
+import numpy as np
+import os
+from model import MedicalCNN
+
+class MedicalImagePredictor:
+    def __init__(self, model_path='medical_model.pth', device='cpu'):
+        """Initialize medical image predictor"""
+        self.device = device
+        
+        checkpoint = torch.load(model_path, map_location=device)
+        self.class_names = checkpoint['class_names']
+        self.input_size = checkpoint['input_size']
+        
+        self.model = MedicalCNN(num_classes=len(self.class_names))
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.model = self.model.to(device)
+        self.model.eval()
+        
+        print(f"Loaded medical image classifier on {device}")
+        print(f"Classes: {self.class_names}")
+        print(f"Input size: {self.input_size}")
+    
+    def preprocess_image(self, image_path):
+        
+        try:
+            
+            image = Image.open(image_path).convert('L')
+            
+            
+            transform = transforms.Compose([
+                transforms.Resize(self.input_size),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.5], std=[0.5])
+            ])
+            
+            image = transform(image).unsqueeze(0)  
+            return image.to(self.device)
+            
+        except Exception as e:
+            print(f"Error processing image: {e}")
+            return None
+    
+    def predict(self, image_path):
+        try:
+            input_tensor = self.preprocess_image(image_path)
+            if input_tensor is None:
+                return None
+            
+            with torch.no_grad():
+                outputs = self.model(input_tensor)
+                probabilities = torch.softmax(outputs, dim=1)
+                confidence, predicted_idx = torch.max(probabilities, 1)
+                
+                predicted_class = self.class_names[predicted_idx.item()]
+                confidence = confidence.item()
+                
+            diagnosis = "PNEUMONIA DETECTED" if predicted_class.upper() == "PNEUMONIA" else "NORMAL"
+            status = "URGENT: Medical attention recommended" if predicted_class.upper() == "PNEUMONIA" else "Normal findings"
+            
+            all_probs = probabilities.cpu().numpy()[0]
+            class_probs = {self.class_names[i]: float(prob) for i, prob in enumerate(all_probs)}
+            
+            return {
+                'diagnosis': diagnosis,
+                'predicted_class': predicted_class,
+                'confidence': float(confidence),
+                'probabilities': class_probs,
+                'status': status,
+                'recommendation': 'Consult a healthcare professional for proper diagnosis.'
+            }
+            
+        except Exception as e:
+            return {'error': str(e)}
+    
+    def predict_batch(self, folder_path):
+        results = {}
+        valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.tiff')
+        
+        for filename in os.listdir(folder_path):
+            if filename.lower().endswith(valid_extensions):
+                image_path = os.path.join(folder_path, filename)
+                results[filename] = self.predict(image_path)
+        
+        return results
+
+def main():
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
+    
+    
+    predictor = MedicalImagePredictor(device=device)
+    
+    test_image = "test_xray.jpg"
+    if os.path.exists(test_image):
+        print(f"\n🔍 Analyzing medical image: {test_image}")
+        result = predictor.predict(test_image)
+        
+        if result and 'error' not in result:
+            print(f"\nMEDICAL IMAGE ANALYSIS RESULTS:")
+            print(f"Diagnosis: {result['diagnosis']}")
+            print(f"Predicted Class: {result['predicted_class']}")
+            print(f"Confidence: {result['confidence']:.3f}")
+            print(f"Probabilities: {result['probabilities']}")
+            print(f"Status: {result['status']}")
+            print(f"Recommendation: {result['recommendation']}")
+        elif result:
+            print(f"Error: {result['error']}")
+    else:
+        print(f"Test image {test_image} not found")
+        print("Please place a medical image in the project directory")
+    
+    test_folder = "test_images"
+    if os.path.exists(test_folder):
+        print(f"\n Analyzing all images in folder: {test_folder}")
+        results = predictor.predict_batch(test_folder)
+        
+        for filename, result in results.items():
+            if result and 'error' not in result:
+                print(f"{filename}: {result['predicted_class']} (Confidence: {result['confidence']:.3f})")
+            elif result:
+                print(f"{filename}: Error - {result['error']}")
+
+if __name__ == "__main__":
+    main()
