@@ -15,8 +15,8 @@ This project implements a convolutional neural network (CNN) to classify chest X
 
 ## Dataset
 
-The project uses the Chest X-Ray Images (Pneumonia) dataset containing:
-5,863 X-ray images (JPEG format)
-2 categories: Normal (1,349) vs Pneumonia (4,514)
-Train/Validation/Test splits included
+-The project uses the Chest X-Ray Images (Pneumonia) dataset containing:
+-5,863 X-ray images (JPEG format)
+-2 categories: Normal (1,349) vs Pneumonia (4,514)
+-Train/Validation/Test splits included
 
